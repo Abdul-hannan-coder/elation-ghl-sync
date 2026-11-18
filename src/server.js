@@ -4,9 +4,16 @@ import { verifySignature } from './verifySignature.js';
 import { handleEvent } from './handlers.js';
 import { fetchPatient } from './elation.js';
 
+const BUILD_VERSION = '2026-11-19-v2';
 const app = express();
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+// Request logging
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+app.get('/health', (_req, res) => res.json({ status: 'ok', version: BUILD_VERSION }));
 
 // Manual sync triggers — requires ELATION_CLIENT_SECRET as Bearer token
 function testAuth(req, res, next) {
