@@ -6,7 +6,7 @@ const REQUIRED = [
   'ELATION_CLIENT_SECRET',
   'ELATION_USERNAME',
   'ELATION_PASSWORD',
-  'ELATION_WEBHOOK_SECRET',
+  'ELATION_SIGNING_PUB_KEYS',
   'GHL_BASE_URL',
   'GHL_API_KEY',
   'GHL_LOCATION_ID',
@@ -27,7 +27,10 @@ export const config = {
     clientSecret: process.env.ELATION_CLIENT_SECRET,
     username: process.env.ELATION_USERNAME,
     password: process.env.ELATION_PASSWORD,
-    webhookSecret: process.env.ELATION_WEBHOOK_SECRET,
+    signingPubKeys: (process.env.ELATION_SIGNING_PUB_KEYS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   },
   ghl: {
     baseUrl: process.env.GHL_BASE_URL,

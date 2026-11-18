@@ -11,7 +11,10 @@ app.post(
   '/webhooks/elation',
   express.raw({ type: '*/*', limit: '1mb' }),
   (req, res) => {
-    const signature = req.get('X-Elation-Signature');
+    const signature =
+      req.get('X-Elation-Signature') ||
+      req.get('X-Elation-Sig') ||
+      req.get('Signature');
     if (!verifySignature(req.body, signature)) {
       return res.status(401).json({ error: 'invalid signature' });
     }
