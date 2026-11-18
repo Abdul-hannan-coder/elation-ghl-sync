@@ -2,10 +2,25 @@ import express from 'express';
 import { config } from './config.js';
 import { verifySignature } from './verifySignature.js';
 import { handleEvent } from './handlers.js';
+import { fetchPatient } from './elation.js';
 
 const app = express();
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// Manual sync trigger — requires ELATION_CLIENT_SECRET as Bearer token
+app.post('/test/sync-patient/:id', express.json(), async (req, res) => {
+  const auth = (req.get('Authorization') || '').replace('Bearer ', '');
+  if (!auth || auth !== config.elation.clientSecret) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  try {
+    await handleEvent({ resource: 'patients', object_id: Number(req.params.id), id: `test-${req.params.id}-${Date.now()}` });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post(
   '/webhooks/elation',
@@ -16,6 +31,7 @@ app.post(
       req.get('X-Elation-Sig') ||
       req.get('Signature');
     if (!verifySignature(req.body, signature)) {
+      console.warn('[webhook] signature verification failed');
       return res.status(401).json({ error: 'invalid signature' });
     }
 
