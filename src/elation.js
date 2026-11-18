@@ -7,9 +7,11 @@ async function getToken() {
   if (tokenCache.token && now < tokenCache.expiresAt) return tokenCache.token;
 
   const body = new URLSearchParams({
-    grant_type: 'client_credentials',
+    grant_type: 'password',
     client_id: config.elation.clientId,
     client_secret: config.elation.clientSecret,
+    username: config.elation.username,
+    password: config.elation.password,
   });
 
   const res = await fetch(`${config.elation.baseUrl}/oauth2/token/`, {
