@@ -44,6 +44,7 @@ export async function upsertContact(contact) {
     dateOfBirth: contact.dateOfBirth,
     source: contact.source,
     tags: contact.tags,
+    customFields: contact.customFields || [],
   };
   const data = await ghlFetch('POST', '/contacts/upsert', payload);
   return data.contact || data;
