@@ -38,12 +38,8 @@ async function handlePatient(objectId) {
   await createOpportunity({
     title: `New patient: ${patient.first_name} ${patient.last_name}`,
     status: 'open',
-    stageId: config.ghl.stageId,
     contactId: contact.id,
     monetaryValue: 0,
-    name: `${patient.first_name} ${patient.last_name}`,
-    email: pickEmail(patient),
-    phone: pickPhone(patient),
   });
 }
 
@@ -57,12 +53,8 @@ async function handleAppointment(objectId) {
   await createOpportunity({
     title: `${appt.reason || 'Appointment'} — ${when}`,
     status: 'open',
-    stageId: config.ghl.stageId,
     contactId: contact.id,
     monetaryValue: 0,
-    name: `${patient.first_name} ${patient.last_name}`,
-    email: pickEmail(patient),
-    phone: pickPhone(patient),
   });
 }
 

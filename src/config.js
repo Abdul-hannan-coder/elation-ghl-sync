@@ -9,6 +9,7 @@ const REQUIRED = [
   'ELATION_WEBHOOK_SECRET',
   'GHL_BASE_URL',
   'GHL_API_KEY',
+  'GHL_LOCATION_ID',
   'GHL_PIPELINE_ID',
   'GHL_PIPELINE_STAGE_ID',
 ];
@@ -30,7 +31,9 @@ export const config = {
   },
   ghl: {
     baseUrl: process.env.GHL_BASE_URL,
+    apiVersion: process.env.GHL_API_VERSION || '2021-07-28',
     apiKey: process.env.GHL_API_KEY,
+    locationId: process.env.GHL_LOCATION_ID,
     pipelineId: process.env.GHL_PIPELINE_ID,
     stageId: process.env.GHL_PIPELINE_STAGE_ID,
   },
