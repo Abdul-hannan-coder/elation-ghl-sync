@@ -13,7 +13,7 @@ function headers() {
   };
 }
 
-async function ghlFetch(method, path, body) {
+async function ghlFetch(method, path, body, { allowDuplicate = false } = {}) {
   const res = await fetch(`${config.ghl.baseUrl}${path}`, {
     method,
     headers: headers(),
@@ -21,6 +21,13 @@ async function ghlFetch(method, path, body) {
   });
   const text = await res.text();
   if (!res.ok) {
+    if (allowDuplicate && res.status === 400) {
+      const err = text ? JSON.parse(text) : {};
+      if (err.code === 'OPPORTUNITY_NO_DUPLICATE' && err.meta?.existingId) {
+        console.log(`[ghl] opportunity already exists: ${err.meta.existingId}`);
+        return { opportunity: { id: err.meta.existingId }, duplicate: true };
+      }
+    }
     throw new Error(`GHL ${method} ${path} failed: ${res.status} ${text}`);
   }
   return text ? JSON.parse(text) : {};
@@ -53,5 +60,19 @@ export function createOpportunity(opp) {
     contactId: opp.contactId,
     monetaryValue: opp.monetaryValue ?? 0,
   };
-  return ghlFetch('POST', '/opportunities/', payload);
+  return ghlFetch('POST', '/opportunities/', payload, { allowDuplicate: true });
+}
+
+export function updateOpportunity(id, fields) {
+  return ghlFetch('PUT', `/opportunities/${id}`, {
+    locationId: config.ghl.locationId,
+    ...fields,
+  });
+}
+
+export async function findOpportunityByContact(contactId) {
+  const data = await ghlFetch('GET',
+    `/opportunities/search?location_id=${config.ghl.locationId}&contact_id=${contactId}&pipeline_id=${config.ghl.pipelineId}&limit=1`
+  );
+  return data.opportunities?.[0] || null;
 }

@@ -1,5 +1,5 @@
 import { fetchPatient, fetchAppointment } from './elation.js';
-import { upsertContact, createOpportunity } from './ghl.js';
+import { upsertContact, createOpportunity, updateOpportunity, findOpportunityByContact } from './ghl.js';
 import { config } from './config.js';
 
 const processed = new Set();
@@ -32,8 +32,14 @@ function contactFromPatient(patient, extraTags = []) {
   };
 }
 
+function formatDate(iso) {
+  if (!iso) return 'scheduled';
+  return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 async function handlePatient(objectId) {
   const patient = await fetchPatient(objectId);
+  console.log(`[handler] patient ${objectId}: ${patient.first_name} ${patient.last_name}`);
   const contact = await upsertContact(contactFromPatient(patient));
   await createOpportunity({
     title: `New patient: ${patient.first_name} ${patient.last_name}`,
@@ -41,21 +47,56 @@ async function handlePatient(objectId) {
     contactId: contact.id,
     monetaryValue: 0,
   });
+  console.log(`[handler] patient ${objectId} synced → GHL contact ${contact.id}`);
 }
 
 async function handleAppointment(objectId) {
   const appt = await fetchAppointment(objectId);
   const patient = await fetchPatient(appt.patient);
+  const apptStatus = appt.status?.status || 'Unknown';
+  const when = formatDate(appt.scheduled_date);
+  const reason = appt.reason || 'Appointment';
+
+  console.log(`[handler] appointment ${objectId}: ${reason} — ${apptStatus} — ${when}`);
+
   const contact = await upsertContact(contactFromPatient(patient, ['elation-appointment']));
-  const when = appt.scheduled_date
-    ? new Date(appt.scheduled_date).toLocaleString('en-US')
-    : 'scheduled';
-  await createOpportunity({
-    title: `${appt.reason || 'Appointment'} — ${when}`,
-    status: 'open',
-    contactId: contact.id,
-    monetaryValue: 0,
-  });
+
+  if (apptStatus === 'Cancelled') {
+    const existing = await findOpportunityByContact(contact.id);
+    if (existing) {
+      await updateOpportunity(existing.id, {
+        name: `CANCELLED: ${reason} — ${when}`,
+        status: 'lost',
+      });
+      console.log(`[handler] appointment ${objectId} cancelled → opportunity ${existing.id} set to lost`);
+    } else {
+      await createOpportunity({
+        title: `CANCELLED: ${reason} — ${when}`,
+        status: 'lost',
+        contactId: contact.id,
+        monetaryValue: 0,
+      });
+    }
+    return;
+  }
+
+  // Scheduled or Rescheduled — check if opportunity exists, update or create
+  const existing = await findOpportunityByContact(contact.id);
+  if (existing) {
+    await updateOpportunity(existing.id, {
+      name: `${reason} — ${when}`,
+      status: 'open',
+    });
+    console.log(`[handler] appointment ${objectId} updated → opportunity ${existing.id}`);
+  } else {
+    await createOpportunity({
+      title: `${reason} — ${when}`,
+      status: 'open',
+      contactId: contact.id,
+      monetaryValue: 0,
+    });
+    console.log(`[handler] appointment ${objectId} created new opportunity`);
+  }
 }
 
 export async function handleEvent(payload) {
